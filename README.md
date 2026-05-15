@@ -58,7 +58,7 @@ Key properties to design around (verify against current Shopify documentation fo
 
 **At-least-once delivery.** Shopify will attempt to deliver each event at least once. Under certain conditions — timeout, non-2xx response, service restart — it will attempt delivery again. Your handler must treat duplicate delivery as a normal operating condition, not an edge case.
 
-**Retry behavior.** When your endpoint does not return a 2xx response promptly, Shopify will retry delivery with increasing delays. The retry window extends over a period of hours. Verify the current retry schedule and maximum attempt count in the [Shopify developer documentation](https://shopify.dev/docs/apps/webhooks/best-practices) before production deployment.
+**Retry behavior.** When your endpoint does not return a 2xx response promptly, Shopify will retry delivery with increasing delays. The retry window extends over a period of hours. Verify the current retry schedule and maximum attempt count in the Shopify developer documentation before production deployment.
 
 **No ordering guarantee.** Multiple webhook events from the same shop may arrive out of order. An `orders/updated` event may arrive before the corresponding `orders/create`. Your handler must not assume that events arrive in the sequence they were generated.
 
@@ -146,7 +146,11 @@ Webhook processing lag, retry rates, dead letter queue depth, and ERP write succ
                └────────────────┘
 ```
 
-See `diagrams/` for Mermaid source files.
+Mermaid source files:
+- [diagrams/webhook-flow.mmd](diagrams/webhook-flow.mmd) — end-to-end delivery path
+- [diagrams/async-processing-pipeline.mmd](diagrams/async-processing-pipeline.mmd) — receiver, queue, worker, target systems
+- [diagrams/retry-lifecycle.mmd](diagrams/retry-lifecycle.mmd) — job state machine from received to DLQ
+- [diagrams/dead-letter-replay.mmd](diagrams/dead-letter-replay.mmd) — DLQ review and replay flow
 
 ---
 
