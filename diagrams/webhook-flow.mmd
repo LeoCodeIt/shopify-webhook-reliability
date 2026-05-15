@@ -1,0 +1,36 @@
+---
+title: Shopify Webhook Delivery Flow
+---
+flowchart LR
+    Shopify([Shopify]) -->|POST /webhooks/{topic}| Receiver
+
+    subgraph Receiver["Webhook Receiver (FastAPI)"]
+        R1[Verify HMAC] --> R2{Valid?}
+        R2 -->|No| R3[Return 401]
+        R2 -->|Yes| R4[Idempotency Check]
+        R4 --> R5{Already\nprocessed?}
+        R5 -->|Yes| R6[Return 200 — skip]
+        R5 -->|No| R7[Persist Event\nto Event Store]
+        R7 --> R8[Enqueue Job\nto Queue]
+        R8 --> R9[Return 200]
+    end
+
+    R7 --> EventStore[(Event Store\nPostgreSQL)]
+    R8 --> Queue[(Message Queue\nRedis Streams)]
+
+    Queue -->|async| Worker
+
+    subgraph Worker["Worker Pool"]
+        W1[Dequeue Job] --> W2[Process Event]
+        W2 --> W3{Success?}
+        W3 -->|Yes| W4[Mark Complete]
+        W3 -->|No| W5{Retries\nLeft?}
+        W5 -->|Yes| W6[Backoff & Retry]
+        W6 --> W2
+        W5 -->|No| W7[Move to DLQ]
+    end
+
+    W2 --> Target[Target System\nERP / WMS / CRM / Marketplace]
+    W7 --> DLQ[(Dead Letter Queue\nPostgreSQL)]
+    DLQ --> Replay[Replay Endpoint\nadmin-only]
+    Replay -->|re-enqueue| Queue

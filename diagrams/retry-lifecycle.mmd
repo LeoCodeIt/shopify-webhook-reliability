@@ -1,0 +1,30 @@
+---
+title: Job Retry Lifecycle
+---
+flowchart TD
+    A([Job Created]) --> B[Worker picks up job]
+    B --> C[Attempt processing]
+    C --> D{Result}
+
+    D -->|Success| E([Job Complete])
+
+    D -->|Retriable failure\n503, timeout, rate limit| F{Retry count\n< max attempts?}
+    F -->|Yes| G["Backoff delay\n2^attempt + jitter seconds"]
+    G --> B
+
+    F -->|No| H[(Dead Letter Queue)]
+
+    D -->|Non-retriable failure\n401, 400, schema error| I{Log and classify}
+    I --> H
+
+    H --> J[Alert fires]
+    J --> K[Human review]
+    K --> L{Root cause\nresolved?}
+    L -->|No| M[Investigate]
+    M --> L
+    L -->|Yes| N[Replay endpoint]
+    N -->|re-enqueue| B
+
+    style H fill:#3d1a1a,stroke:#e05c5c,color:#f0f0f0
+    style E fill:#1a3d1a,stroke:#3dba72,color:#f0f0f0
+    style J fill:#3d2a1a,stroke:#f0814a,color:#f0f0f0

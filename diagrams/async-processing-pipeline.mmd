@@ -1,0 +1,44 @@
+---
+title: Async Webhook Processing Pipeline
+---
+flowchart LR
+    Shopify([Shopify\nWebhook]) --> Receiver
+
+    subgraph Receiver["Receiver Layer"]
+        R[FastAPI\nWebhook Receiver]
+    end
+
+    Receiver --> EventStore[(Event Store\nPostgreSQL\ndurable)]
+    EventStore --> Queue
+
+    subgraph Queue["Queue Layer"]
+        Q[Redis Streams\nMessage Queue]
+        DLQ[(Dead Letter\nQueue)]
+    end
+
+    Queue --> Workers
+
+    subgraph Workers["Worker Layer"]
+        W1[Order Worker]
+        W2[Inventory Worker]
+        W3[Fulfillment Worker]
+        W4[Catalog Worker]
+    end
+
+    W1 --> ERP[ERP]
+    W2 --> WMS[WMS]
+    W3 --> ThreePL[3PL]
+    W4 --> Marketplace[Marketplace]
+
+    Workers --> Observability
+
+    subgraph Observability["Observability Layer"]
+        Metrics[Prometheus\nMetrics]
+        Logs[Structured\nJSON Logs]
+    end
+
+    Q -->|exhausted retries| DLQ
+    DLQ --> ReplayEndpoint[Replay Endpoint\nadmin-only]
+    ReplayEndpoint -->|re-enqueue| Q
+
+    note["Each layer has a single responsibility.\nThe receiver never calls external systems.\nWorkers never know about Shopify's delivery model."]

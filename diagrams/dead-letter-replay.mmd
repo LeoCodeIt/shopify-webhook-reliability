@@ -1,0 +1,27 @@
+---
+title: Dead Letter Queue and Replay Flow
+---
+flowchart LR
+    DLQ[(Dead Letter Queue)] --> Review[Review DLQ entries\nfilter by topic / time / error]
+
+    Review --> Inspect[Inspect full payload\nand error history]
+    Inspect --> Decision{Root cause\nresolved?}
+
+    Decision -->|No| Fix[Fix root cause:\nadapter bug / ERP issue / schema mismatch]
+    Fix --> Decision
+
+    Decision -->|Yes| SingleReplay[Replay single event\nverify fix works]
+    SingleReplay --> Verify{Processing\nsuccessful?}
+
+    Verify -->|No| Fix
+    Verify -->|Yes| BatchReplay[Replay affected batch\nby time range or topic]
+
+    BatchReplay --> Queue[(Message Queue)]
+    Queue --> Worker[Worker]
+
+    Worker --> Target{Outcome}
+    Target -->|Success| Resolved([Mark DLQ entry resolved])
+    Target -->|Failure| DLQ
+
+    style DLQ fill:#3d1a1a,stroke:#e05c5c,color:#f0f0f0
+    style Resolved fill:#1a3d1a,stroke:#3dba72,color:#f0f0f0
