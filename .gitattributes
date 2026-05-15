@@ -1,0 +1,6 @@
+# Tell GitHub Linguist to treat Mermaid and Markdown files as documentation.
+# Without this, .mmd files dominate the language detection and the repo
+# appears as "Mermaid 100%" instead of Python.
+
+*.mmd linguist-documentation=true
+*.md  linguist-documentation=true

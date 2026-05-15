@@ -1,5 +1,9 @@
 # shopify-webhook-reliability
 
+![Status](https://img.shields.io/badge/status-reference_architecture-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Focus](https://img.shields.io/badge/focus-Shopify_webhook_reliability-purple)
+
 A technical reference architecture for designing reliable Shopify webhook handlers. Covers idempotency, async processing, retry strategies, dead letter queues, and replay tooling.
 
 > **This is a reference architecture and educational implementation.** It documents patterns, design decisions, and trade-offs — not a production-ready framework. Adapt the patterns to your infrastructure and requirements.
@@ -54,17 +58,17 @@ The patterns in this repository address each of these. They are not new patterns
 
 ## Shopify Webhook Delivery Model
 
-Key properties to design around (verify against current Shopify documentation for exact specifications):
+Key properties to design around. Always verify exact specifications against the [Shopify webhook documentation](https://shopify.dev/docs/apps/build/webhooks) — delivery behavior and timeout values are subject to change.
 
 **At-least-once delivery.** Shopify will attempt to deliver each event at least once. Under certain conditions — timeout, non-2xx response, service restart — it will attempt delivery again. Your handler must treat duplicate delivery as a normal operating condition, not an edge case.
 
-**Retry behavior.** When your endpoint does not return a 2xx response promptly, Shopify will retry delivery with increasing delays. The retry window extends over a period of hours. Verify the current retry schedule and maximum attempt count in the Shopify developer documentation before production deployment.
+**Retry behavior.** When your endpoint does not return a 2xx response promptly, Shopify will retry delivery with increasing delays. The retry window extends over a period of hours. Verify the current retry schedule and maximum attempt count in the [Shopify webhook documentation](https://shopify.dev/docs/apps/build/webhooks) before production deployment.
 
 **No ordering guarantee.** Multiple webhook events from the same shop may arrive out of order. An `orders/updated` event may arrive before the corresponding `orders/create`. Your handler must not assume that events arrive in the sequence they were generated.
 
-**Delivery timeout.** Shopify expects a response within a short window (verify the current timeout in Shopify documentation). Processing the event synchronously in the handler risks exceeding this window and triggering a retry. Return 200 immediately; process asynchronously.
+**Delivery timeout.** Shopify expects a response within a short window. Verify the current timeout value in the [Shopify webhook documentation](https://shopify.dev/docs/apps/build/webhooks). Processing the event synchronously in the handler risks exceeding this window and triggering a retry. Return 200 immediately; process asynchronously.
 
-**HMAC signature.** Every webhook delivery includes an HMAC-SHA256 signature in the `X-Shopify-Hmac-Sha256` header. Verify this signature against the raw request body before processing. Reject any request that fails verification.
+**HMAC signature.** Every webhook delivery includes an HMAC-SHA256 signature in the `X-Shopify-Hmac-Sha256` header. Verify this signature against the raw request body before processing. Reject any request that fails verification. See the [Shopify webhook documentation](https://shopify.dev/docs/apps/build/webhooks) for the verification algorithm and header reference.
 
 ---
 
@@ -302,14 +306,14 @@ See `docs/replay-tooling.md` and `examples/replay-endpoint/`.
 A webhook handler without observability is a black box. You will not know it is failing until a merchant notices missing data. Instrument the following:
 
 | Metric | Description | Alert condition |
-|---|---|---|
-| `webhook_receive_total` | Total webhooks received, by topic | baseline monitoring |
+|:---|:---|:---|
+| `webhook_receive_total` | Total webhooks received, by topic | Baseline — monitor for unexpected drops |
 | `webhook_duplicate_total` | Webhooks rejected by idempotency check | >5% of total is unusual |
-| `webhook_processing_duration_seconds` | Time from enqueue to successful processing | p99 > 30s is concerning |
-| `webhook_retry_total` | Total retry attempts | growing trend indicates systemic issue |
-| `dlq_size` | Current DLQ depth | any growth requires attention |
-| `erp_write_success_rate` | ERP write success percentage | <95% sustained is a problem |
-| `queue_depth` | Current job queue depth | growing consistently = backpressure |
+| `webhook_processing_duration_seconds` | Time from enqueue to successful processing | p99 > 30s |
+| `webhook_retry_total` | Total retry attempts | Growing trend indicates systemic issue |
+| `dlq_size` | Current DLQ depth | Any growth requires immediate attention |
+| `erp_write_success_rate` | ERP write success percentage | <95% sustained |
+| `queue_depth` | Current job queue depth | Consistently growing = backpressure |
 
 Emit structured logs at every stage boundary:
 
@@ -446,8 +450,7 @@ curl -X POST http://localhost:8000/webhooks/orders/create \
 **[shopify-integration-architecture](https://github.com/LeoCodeIt/shopify-integration-architecture)**
 The broader integration architecture this repository extends — middleware design, event flow, ERP adapter patterns, and observability for the full integration stack.
 
-**Future reading:**
-Codepunklab articles on Shopify Plus integration architecture: [codepunklab.com](https://codepunklab.com)
+**Future Codepunklab article:** deep-dive on Shopify Plus integration architecture — coming soon.
 
 ---
 
