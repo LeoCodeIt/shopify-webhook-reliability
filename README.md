@@ -450,7 +450,11 @@ curl -X POST http://localhost:8000/webhooks/orders/create \
 **[shopify-integration-architecture](https://github.com/LeoCodeIt/shopify-integration-architecture)**
 The broader integration architecture this repository extends — middleware design, event flow, ERP adapter patterns, and observability for the full integration stack.
 
-**Future Codepunklab article:** deep-dive on Shopify Plus integration architecture — coming soon.
+**[Webhook Idempotency Design](https://codepunklab.com/patterns/webhook-idempotency/)**
+The same problem written up as an architecture pattern on codepunklab.com, with the reasoning behind the trade-offs implemented here.
+
+**[ERP Sync Engine Migration for a High-Volume Shopify Plus Merchant](https://codepunklab.com/case-studies/erp-sync-migration/)**
+A case study where these patterns were applied in production, anonymised.
 
 ---
 
